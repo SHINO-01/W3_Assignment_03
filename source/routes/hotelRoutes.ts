@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Router, Request, Response } from 'express';
 import { createHotel, uploadImages, getHotel, updateHotel } from '../controllers/hotelController';
 import { upload } from '../middlewares/uploadImg';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 router.post('/hotel', createHotel);
 router.post('/images', upload.array('images'), uploadImages);

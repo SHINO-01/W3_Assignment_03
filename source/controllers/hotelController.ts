@@ -6,7 +6,7 @@ import { Hotel } from '../models/hotelModel';
 
 const dataPath = path.join(__dirname, '../data/');
 
-export const createHotel = (req: Request, res: Response) => {
+export const createHotel = (req: Request, res: Response): void => {
   const { title, description, guestCount, bedroomCount, bathroomCount, amenities, host, address, latitude, longitude, rooms } = req.body;
   
   const hotelID = new Date().getTime().toString();  // simple unique ID
@@ -19,12 +19,13 @@ export const createHotel = (req: Request, res: Response) => {
   res.status(201).json(newHotel);
 };
 
-export const uploadImages = (req: Request, res: Response) => {
+export const uploadImages = (req: Request, res: Response): void => {
   const { hotelId } = req.body;
   const hotelPath = `${dataPath}${hotelId}.json`;
 
   if (!fs.existsSync(hotelPath)) {
-    return res.status(404).json({ message: 'Hotel not found' });
+    res.status(404).json({ message: 'Hotel not found' });
+    return;
   }
 
   const hotel: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
@@ -40,25 +41,26 @@ export const uploadImages = (req: Request, res: Response) => {
   res.status(200).json({ message: 'Images uploaded successfully', images: imageBase64Strings });
 };
 
-export const getHotel = (req: Request, res: Response) => {
+export const getHotel = async (req: Request, res: Response): Promise<void> => {
   const { hotelId } = req.params;
   const hotelPath = `${dataPath}${hotelId}.json`;
 
   if (!fs.existsSync(hotelPath)) {
-    return res.status(404).json({ message: 'Hotel not found' });
+    res.status(404).json({ message: 'Hotel not found' });
+    return;
   }
 
-  const hotel: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
-
+  const hotel: Hotel = JSON.parse(await fs.promises.readFile(hotelPath, 'utf-8'));
   res.status(200).json(hotel);
 };
 
-export const updateHotel = (req: Request, res: Response) => {
+export const updateHotel = (req: Request, res: Response): void => {
   const { hotelId } = req.params;
   const hotelPath = `${dataPath}${hotelId}.json`;
 
   if (!fs.existsSync(hotelPath)) {
-    return res.status(404).json({ message: 'Hotel not found' });
+    res.status(404).json({ message: 'Hotel not found' });
+    return;
   }
 
   const updatedHotel = { ...JSON.parse(fs.readFileSync(hotelPath, 'utf-8')), ...req.body };
