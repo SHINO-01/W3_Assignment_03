@@ -1,12 +1,15 @@
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
-import slugify from 'slugify';
-import { Hotel } from '../models/hotelModel';
+import { Hotel, Room } from '../models/hotelModel';
 import { __dirname } from '../dirnameHelper';
 
 const dataPath = path.join(__dirname, '../data/');
+const imageDirectory = path.join(__dirname, '../uploads/images');
+
+if (!fs.existsSync(imageDirectory)) {
+  fs.mkdirSync(imageDirectory, { recursive: true });
+}
 
 function generateUID(): string {
   const alphabets = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -33,34 +36,90 @@ if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true }); // Create the directory if it doesn't exist
 }
 
+
+// Controller function to handle hotel creation and image storage
+
 export const createHotel = (req: Request, res: Response): void => {
   try {
-  
-    const { title, description, guestCount, bedroomCount, bathroomCount, amenities, host, address, latitude, longitude, rooms } = req.body;
-    
+    const {
+      title,
+      description,
+      guestCount,
+      bedroomCount,
+      bathroomCount,
+      amenities,
+      host,
+      address,
+      latitude,
+      longitude,
+      rooms,
+      hotelImages, // Expecting hotel images as an array of image paths
+    } = req.body;
+
     const hotelID = generateUID();
-    const slug = slugify(title, { lower: true });
-    
-    const newHotel: Hotel = { hotelID, slug, images: [], title, description, guestCount, bedroomCount, bathroomCount, amenities, host, address, latitude, longitude, rooms };
-    
-    try {
-      const filePath = path.join(dataPath, `${hotelID}.json`);
-      console.log('Saving hotel data to:', filePath);  // Debug log
-      fs.writeFileSync(filePath, JSON.stringify(newHotel, null, 2));
-    } catch (error) {
-      console.error('Error writing file:', error);  // Log the error in case of failure
-    }    
-    
+    const slug = title.toLowerCase().replace(/\s+/g, '-');
+
+    // Save images and generate file paths
+    const savedHotelImages = hotelImages.map((imagePath: string) => {
+      const imageExtension = path.extname(imagePath);
+      const imageFileName = `${hotelID}_hotel_${Date.now()}${imageExtension}`;
+      const imageDestination = path.join(__dirname, `../uploads/images`, imageFileName);
+
+      // Copy image to the "uploads/images" directory
+      fs.copyFileSync(imagePath, imageDestination);
+
+      // Return relative path for the image to store in JSON file
+      return `/uploads/images/${imageFileName}`;
+    });
+
+    // Similarly handle room images (if any)
+    const savedRooms = rooms.map((room: Room) => ({
+      ...room,
+      roomImage: room.roomImage.map((imagePath: string) => {
+        const imageExtension = path.extname(imagePath);
+        const imageFileName = `${hotelID}_room_${Date.now()}${imageExtension}`;
+        const imageDestination = path.join(__dirname, `../uploads/images`, imageFileName);
+
+        // Copy image to the "uploads/images" directory
+        fs.copyFileSync(imagePath, imageDestination);
+
+        // Return relative path for the room image to store in JSON file
+        return `/uploads/images/${imageFileName}`;
+      })
+    }));
+
+    // Create the hotel object
+    const newHotel: Hotel = {
+      hotelID,
+      slug,
+      images: savedHotelImages,
+      title,
+      description,
+      guestCount,
+      bedroomCount,
+      bathroomCount,
+      amenities,
+      host,
+      address,
+      latitude,
+      longitude,
+      rooms: savedRooms
+    };
+
+    const filePath = path.join(dataPath, `${hotelID}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(newHotel, null, 2));
+
     res.status(201).json(newHotel);
   } catch (error) {
-    console.error('Error creating hotel:', error); // Log the error details
+    console.error('Error creating hotel:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 };
 
 
+
 export const uploadImages = (req: Request, res: Response): void => {
-  const { hotelId } = req.body;
+  const { hotelId, roomTitle } = req.body;
   const hotelPath = `${dataPath}${hotelId}.json`;
 
   if (!fs.existsSync(hotelPath)) {
@@ -70,16 +129,23 @@ export const uploadImages = (req: Request, res: Response): void => {
 
   const hotel: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
 
+  const room = hotel.rooms.find(r => r.roomTitle === roomTitle);
+  if (!room) {
+    res.status(404).json({ message: 'Room not found' });
+    return;
+  }
+
   const imageBase64Strings = (req.files as Express.Multer.File[])?.map((file) => {
     return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
   });
 
-  hotel.images = hotel.images.concat(imageBase64Strings || []);
+  room.roomImage = room.roomImage.concat(imageBase64Strings || []);
 
   fs.writeFileSync(hotelPath, JSON.stringify(hotel, null, 2));
 
-  res.status(200).json({ message: 'Images uploaded successfully', images: imageBase64Strings });
+  res.status(200).json({ message: 'Images uploaded successfully for the room', images: imageBase64Strings });
 };
+
 
 export const getHotel = async (req: Request, res: Response): Promise<void> => {
   const { hotelId } = req.params;
