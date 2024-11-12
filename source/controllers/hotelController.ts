@@ -3,6 +3,7 @@ import fs from 'fs';
 import { Request, Response } from 'express';
 import { Hotel, Room } from '../models/hotelModel';
 import { __dirname } from '../dirnameHelper';
+import slugify from 'slugify';
 
 const dataPath = path.join(__dirname, '../data/');
 const imageDirectory = path.join(__dirname, '../uploads/images');
@@ -17,13 +18,11 @@ function generateUID(): string {
 
   let uid = '';
 
-  // Generate first 3 alphabet characters
   for (let i = 0; i < 3; i++) {
     const randomIndex = Math.floor(Math.random() * alphabets.length);
     uid += alphabets[randomIndex];
   }
 
-  // Generate last 3 digit characters
   for (let i = 0; i < 3; i++) {
     const randomIndex = Math.floor(Math.random() * digits.length);
     uid += digits[randomIndex];
@@ -33,12 +32,12 @@ function generateUID(): string {
 }
 
 if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true }); // Create the directory if it doesn't exist
+  fs.mkdirSync(dataPath, { recursive: true });
 }
 
+// Helper function to create a base64-encoded test image file
 
-// Controller function to handle hotel creation and image storage
-
+// Controller function to handle hotel creation and base64 image storage
 export const createHotel = (req: Request, res: Response): void => {
   try {
     const {
@@ -53,42 +52,37 @@ export const createHotel = (req: Request, res: Response): void => {
       latitude,
       longitude,
       rooms,
-      hotelImages, // Expecting hotel images as an array of image paths
+      hotelImages, // Expecting hotel images as an array of base64 strings
     } = req.body;
 
     const hotelID = generateUID();
-    const slug = title.toLowerCase().replace(/\s+/g, '-');
+    const slug = slugify(title, { lower: true });
 
-    // Save images and generate file paths
-    const savedHotelImages = hotelImages.map((imagePath: string) => {
-      const imageExtension = path.extname(imagePath);
-      const imageFileName = `${hotelID}_hotel_${Date.now()}${imageExtension}`;
-      const imageDestination = path.join(__dirname, `../uploads/images`, imageFileName);
+    // Save base64 images to file system
+    const savedHotelImages = hotelImages.map((base64Image: string, index: number) => {
+      const imageFileName = `${hotelID}_hotel_${Date.now()}_${index}.png`;
+      const imageDestination = path.join(imageDirectory, imageFileName);
 
-      // Copy image to the "uploads/images" directory
-      fs.copyFileSync(imagePath, imageDestination);
+      // Decode base64 and write to the image destination
+      const imageBuffer = Buffer.from(base64Image, 'base64');
+      fs.writeFileSync(imageDestination, imageBuffer);
 
-      // Return relative path for the image to store in JSON file
       return `/uploads/images/${imageFileName}`;
     });
 
-    // Similarly handle room images (if any)
     const savedRooms = rooms.map((room: Room) => ({
       ...room,
-      roomImage: room.roomImage.map((imagePath: string) => {
-        const imageExtension = path.extname(imagePath);
-        const imageFileName = `${hotelID}_room_${Date.now()}${imageExtension}`;
-        const imageDestination = path.join(__dirname, `../uploads/images`, imageFileName);
+      roomImage: room.roomImage.map((base64Image: string, index: number) => {
+        const imageFileName = `${hotelID}_room_${Date.now()}_${index}.png`;
+        const imageDestination = path.join(imageDirectory, imageFileName);
 
-        // Copy image to the "uploads/images" directory
-        fs.copyFileSync(imagePath, imageDestination);
+        const imageBuffer = Buffer.from(base64Image, 'base64');
+        fs.writeFileSync(imageDestination, imageBuffer);
 
-        // Return relative path for the room image to store in JSON file
         return `/uploads/images/${imageFileName}`;
       })
     }));
 
-    // Create the hotel object
     const newHotel: Hotel = {
       hotelID,
       slug,
@@ -112,9 +106,13 @@ export const createHotel = (req: Request, res: Response): void => {
     res.status(201).json(newHotel);
   } catch (error) {
     console.error('Error creating hotel:', error);
-    res.status(500).json({ message: 'Internal Server Error', error: error instanceof Error ? error.message : 'Unknown error' });
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
+
 
 
 

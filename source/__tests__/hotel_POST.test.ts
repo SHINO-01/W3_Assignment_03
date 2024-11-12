@@ -1,28 +1,29 @@
 import request from 'supertest';
 import fs from 'fs';
 import path from 'path';
-import { app, server } from '../index';  // Import both app and server
+import { app, server } from '../index';
 
-// Ensure the uploads/images directory exists for testing purposes
 const testImageDir = path.join(__dirname, '../test-img');
-if (!fs.existsSync(testImageDir)) {
-  fs.mkdirSync(testImageDir);
-}
 
-// Helper function to create a test image file
-const createTestImage = (imageName: string): string => {
-  const imagePath = path.join(testImageDir, imageName);
-  const sampleImage = Buffer.from('sample image data');  // Simulating image data (use an actual image in production)
-  fs.writeFileSync(imagePath, sampleImage);
-  return imagePath;
+// Helper function to read an existing test image as base64
+const getTestImageAsBase64 = (imageName: string): string => {
+  const testImagePath = path.join(testImageDir, imageName);
+
+  // Check if the file exists
+  if (!fs.existsSync(testImagePath)) {
+    throw new Error(`Test image ${imageName} not found at ${testImagePath}`);
+  }
+
+  // Read the file and encode it to base64
+  const imageData = fs.readFileSync(testImagePath);
+  return `data:image/png;base64,${imageData.toString('base64')}`;
 };
 
-test('POST /api/hotel - Create a new hotel with images', async () => {
-  // Create test images
-  const hotelImagePath = createTestImage('image01.png');
-  const roomImagePath = createTestImage('image03.png');
+test('POST /api/hotel - Create a new hotel with real image data', async () => {
+  // Fetch images from the directory
+  const hotelImage = getTestImageAsBase64('image02.png');
+  const roomImage = getTestImageAsBase64('image05.png');
 
-  // Define hotel data with image paths
   const hotelData = {
     title: 'Sunshine Inn',
     description: 'A cozy hotel by the beach.',
@@ -34,15 +35,15 @@ test('POST /api/hotel - Create a new hotel with images', async () => {
     address: '123 Beach Ave, Miami, FL',
     latitude: 25.7617,
     longitude: -80.1918,
-    hotelImages: [hotelImagePath],  // Pass the path of the hotel image
+    hotelImages: [hotelImage], // Send image as base64
     rooms: [
       {
         roomTitle: 'Deluxe Suite',
         bedroomCount: 1,
         bathroomCount: 1,
-        roomImage: [roomImagePath]  // Pass the path of the room image
-      }
-    ]
+        roomImage: [roomImage], // Send image as base64
+      },
+    ],
   };
 
   const response = await request(app)
@@ -50,24 +51,17 @@ test('POST /api/hotel - Create a new hotel with images', async () => {
     .send(hotelData)
     .set('Content-Type', 'application/json');
 
-  // Log the response for debugging
-  console.log('Response body:', response.body);
-
   // Validate response
   expect(response.status).toBe(201);
   expect(response.body).toHaveProperty('hotelID');
   expect(response.body).toHaveProperty('title', hotelData.title);
-  expect(response.body.images.length).toBe(1);  // Verify hotel image was saved
-  expect(response.body.rooms[0].roomImage.length).toBe(1);  // Verify room image was saved
+  expect(response.body.images.length).toBe(1); // Verify hotel image was saved
+  expect(response.body.rooms[0].roomImage.length).toBe(1); // Verify room image was saved
   expect(response.body.rooms[0].roomTitle).toBe('Deluxe Suite');
   expect(response.body.rooms[0].bedroomCount).toBe(1);
-
-  // Clean up: Remove the test image files after the test
-  fs.unlinkSync(hotelImagePath);
-  fs.unlinkSync(roomImagePath);
 });
 
 // Close the server after all tests have run
 afterAll(() => {
-  server.close();  // Close the server after tests are done
+  server.close();
 });
