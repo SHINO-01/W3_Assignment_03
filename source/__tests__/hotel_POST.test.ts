@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../index';
+import { app, server } from '../index';  // Import both app and server
 
 test('POST /api/hotel - Create a new hotel', async () => {
   const hotelData = {
@@ -27,11 +27,12 @@ test('POST /api/hotel - Create a new hotel', async () => {
     .send(hotelData)
     .set('Content-Type', 'application/json');  // Ensure correct content type
 
-  console.log('Response body:', response.body); // Log the response for debugging
-  
   expect(response.status).toBe(201);
   expect(response.body).toHaveProperty('hotelID');
   expect(response.body).toHaveProperty('title', hotelData.title);
 });
 
-
+// Close the server after all tests have run
+afterAll(() => {
+  server.close();  // Close the server after tests are done
+});

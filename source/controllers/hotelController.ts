@@ -9,7 +9,7 @@ import { __dirname } from '../dirnameHelper';
 const dataPath = path.join(__dirname, '../data/');
 
 function generateUID(): string {
-  const alphabets = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const alphabets = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const digits = '0123456789';
 
   let uid = '';

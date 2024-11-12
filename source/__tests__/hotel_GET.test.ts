@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../index';  // Import your Express app
+import {app, server} from '../index';  // Import your Express app
 
 describe('Hotel API', () => {
   it('GET /api/hotels - Get all hotels', async () => {
