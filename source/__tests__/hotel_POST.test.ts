@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { app, server } from '../index';
 
-const testImageDir = path.join(__dirname, '../test-img');
+const testImageDir = path.join(__dirname, '../../test-img');
 
 // Helper function to read an existing test image as base64
 const getTestImageAsBase64 = (imageName: string): string => {

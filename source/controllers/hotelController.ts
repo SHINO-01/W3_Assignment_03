@@ -7,6 +7,7 @@ import slugify from 'slugify';
 
 const dataPath = path.join(__dirname, '../data/');
 const imageDirectory = path.join(__dirname, '../uploads/images');
+const imageBaseURL = 'http://localhost:3000/uploads/images'; // Base URL for serving images
 
 if (!fs.existsSync(imageDirectory)) {
   fs.mkdirSync(imageDirectory, { recursive: true });
@@ -159,34 +160,40 @@ export const uploadImages = (req: Request, res: Response): void => {
 };
 
 //=============================================GET HOTEL==========================================================
-export const getHotel = (req: Request, res: Response) => {
-  const { hotelID } = req.params;
-
-  // Generate the path to the hotel data file
-  const hotelPath = path.join(__dirname, '../data', `${hotelID}.json`);
-
-  // Check if the hotel file exists
-  if (!fs.existsSync(hotelPath)) {
-    return res.status(404).json({ message: 'Hotel not found' });
-  }
-
+export const getHotel = (req: Request, res: Response): Response | void => {
   try {
-    const hotelData: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
+    const identifier = req.params.hotelID;
+    const slugifiedIdentifier = slugify(identifier, { lower: true });
 
-    // Construct full image URLs
-    hotelData.images = hotelData.images.map((image) => `http://localhost:3000${image}`);
-    hotelData.rooms.forEach((room) => {
-      room.roomImage = room.roomImage.map((image) => `http://localhost:3000${image}`);
+    // Initialize a variable to hold the matched hotel data
+    let matchedHotelData = null;
+
+    // Loop through all files in the dataPath directory
+    fs.readdirSync(dataPath).forEach((file) => {
+      const filePath = path.join(dataPath, file);
+      const hotelData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+      // Check if the file's data matches either the hotelID or slug
+      if (hotelData.hotelID === identifier || hotelData.slug === slugifiedIdentifier) {
+        matchedHotelData = hotelData;
+      }
     });
 
-    // Send the hotel data as the response
-    return res.status(200).json(hotelData);
+    // If no match was found, return 404
+    if (!matchedHotelData) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+
+    // Return the matched hotel data
+    return res.status(200).json(matchedHotelData);
   } catch (error) {
-    console.error('Error reading hotel data:', error); // Log the error for debugging
-    return res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error retrieving hotel:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 };
-
 //=============================================UPDATE HOTEL========================================================
 export const updateHotel = (req: Request, res: Response): void => {
   const { hotelId } = req.params;
