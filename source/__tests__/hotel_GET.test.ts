@@ -9,6 +9,7 @@ function logResponse(testName: string, response: any) {
   console.log('Response Body:', JSON.stringify(response.body, null, 2));
   console.log('='.repeat(80) + '\n');
 }
+const hotelID = 'SZA340';
 
 describe('GET /api/hotel/:hotelID', () => {
   afterAll((done) => {
@@ -16,7 +17,6 @@ describe('GET /api/hotel/:hotelID', () => {
   });
 
   it('should retrieve the hotel data with base64 images for a valid hotel ID', async () => {
-    const hotelID = 'WHP902';
     const response = await request(app).get(`/api/hotel/${hotelID}`);
 
     // Log the response
@@ -137,7 +137,6 @@ describe('GET /api/hotel/:hotelID', () => {
   });
 
   it('should handle large images without timing out', async () => {
-    const hotelID = 'WHP902';
     const response = await request(app)
       .get(`/api/hotel/${hotelID}`)
       .timeout(5000);
@@ -158,7 +157,6 @@ describe('GET /api/hotel/:hotelID', () => {
   }, 10000);
 
   it('should maintain correct content-type headers', async () => {
-    const hotelID = 'WHP902';
     const response = await request(app).get(`/api/hotel/${hotelID}`);
 
     // Log the response headers

@@ -8,7 +8,7 @@ import { __dirname } from '../dirnameHelper';
 const dataPath = path.join(__dirname, '../data/');
 
 describe('Update Hotel Controller', () => {
-  const testHotelID = 'WHP902'; // Using existing hotel ID from sample
+  const testHotelID = 'SZA340'; // Using existing hotel ID from sample
   let originalHotelData: Hotel;
 
   beforeEach(() => {
