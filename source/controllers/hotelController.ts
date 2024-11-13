@@ -237,18 +237,122 @@ export const getHotel = (req: Request, res: Response): Response | void => {
   }
 };
 //=============================================UPDATE HOTEL========================================================
-export const updateHotel = (req: Request, res: Response): void => {
-  const { hotelId } = req.params;
-  const hotelPath = `${dataPath}${hotelId}.json`;
+export const updateHotel = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const hotelID = req.params.hotelID;
+    const filePath = path.join(dataPath, `${hotelID}.json`);
 
-  if (!fs.existsSync(hotelPath)) {
-    res.status(404).json({ message: 'Hotel not found' });
-    return;
+    // Check if hotel exists
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: 'Hotel not found' });
+      return;
+    }
+
+    // Read existing hotel data
+    const existingHotel: Hotel = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+    const {
+      title,
+      description,
+      guestCount,
+      bedroomCount,
+      bathroomCount,
+      amenities,
+      host,
+      address,
+      latitude,
+      longitude,
+      rooms,
+      hotelImages, // Optional: new images to add/replace
+    } = req.body;
+
+    // Handle hotel images if provided
+    let updatedHotelImages = [...existingHotel.images];
+    if (hotelImages && Array.isArray(hotelImages)) {
+      // Save new base64 images
+      const newHotelImages = hotelImages.map((base64Image: string, index: number) => {
+        const imageFileName = `${hotelID}_hotel_${Date.now()}_${index}.png`;
+        const imageDestination = path.join(imageDirectory, imageFileName);
+        
+        const imageBuffer = Buffer.from(base64Image, 'base64');
+        fs.writeFileSync(imageDestination, imageBuffer);
+        
+        return `/uploads/images/${imageFileName}`;
+      });
+
+      // Remove old images from filesystem
+      existingHotel.images.forEach(imagePath => {
+        const fullPath = path.join(__dirname, '..', imagePath);
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      });
+
+      updatedHotelImages = newHotelImages;
+    }
+
+    // Handle room updates if provided
+    let updatedRooms = existingHotel.rooms;
+    if (rooms && Array.isArray(rooms)) {
+      // Remove old room images from filesystem
+      existingHotel.rooms.forEach(room => {
+        room.roomImage.forEach(imagePath => {
+          const fullPath = path.join(__dirname, '..', imagePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+          }
+        });
+      });
+
+      // Process and save new room images
+      updatedRooms = rooms.map((room: Room & { roomImage: string[] }) => ({
+        ...room,
+        hotelSlug: slugify(title || existingHotel.title, { lower: true }),
+        roomImage: room.roomImage.map((base64Image: string, index: number) => {
+          const imageFileName = `${hotelID}_room_${Date.now()}_${index}.png`;
+          const imageDestination = path.join(imageDirectory, imageFileName);
+          
+          const imageBuffer = Buffer.from(base64Image, 'base64');
+          fs.writeFileSync(imageDestination, imageBuffer);
+          
+          return `/uploads/images/${imageFileName}`;
+        })
+      }));
+    }
+
+    // Create updated hotel object
+    const updatedHotel: Hotel = {
+      ...existingHotel,
+      title: title || existingHotel.title,
+      slug: title ? slugify(title, { lower: true }) : existingHotel.slug,
+      description: description || existingHotel.description,
+      guestCount: guestCount || existingHotel.guestCount,
+      bedroomCount: bedroomCount || existingHotel.bedroomCount,
+      bathroomCount: bathroomCount || existingHotel.bathroomCount,
+      amenities: amenities || existingHotel.amenities,
+      host: host || existingHotel.host,
+      address: address || existingHotel.address,
+      latitude: latitude || existingHotel.latitude,
+      longitude: longitude || existingHotel.longitude,
+      images: updatedHotelImages,
+      rooms: updatedRooms
+    };
+
+    // Save updated hotel data
+    fs.writeFileSync(filePath, JSON.stringify(updatedHotel, null, 2));
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        hotel: updatedHotel
+      }
+    });
+  } catch (error) {
+    console.error('Error updating hotel:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-
-  const updatedHotel = { ...JSON.parse(fs.readFileSync(hotelPath, 'utf-8')), ...req.body };
-
-  fs.writeFileSync(hotelPath, JSON.stringify(updatedHotel, null, 2));
-
-  res.status(200).json(updatedHotel);
 };
