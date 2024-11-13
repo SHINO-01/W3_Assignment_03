@@ -160,18 +160,50 @@ export const uploadImages = (req: Request, res: Response): void => {
 };
 
 //=============================================GET HOTEL==========================================================
+function getBase64Image(imagePath: string): string {
+  try {
+    const fullPath = path.join(__dirname, '..', imagePath);
+    const imageBuffer = fs.readFileSync(fullPath);
+    return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+  } catch (error) {
+    console.error(`Error reading image file: ${imagePath}`, error);
+    return '';
+  }
+}
+
+function processHotelData(hotelData: Hotel): Hotel & { 
+  base64Images: string[],
+  rooms: (Room & { base64RoomImages: string[] })[] 
+} {
+  // Convert hotel images to base64
+  const base64Images = hotelData.images.map(imagePath => getBase64Image(imagePath));
+
+  // Process rooms and their images
+  const processedRooms = hotelData.rooms.map(room => ({
+    ...room,
+    base64RoomImages: room.roomImage.map(imagePath => getBase64Image(imagePath)),
+    roomImage: room.roomImage // Keep original paths
+  }));
+
+  return {
+    ...hotelData,
+    base64Images,
+    rooms: processedRooms
+  };
+}
+
 export const getHotel = (req: Request, res: Response): Response | void => {
   try {
     const identifier = req.params.hotelID;
     const slugifiedIdentifier = slugify(identifier, { lower: true });
 
     // Initialize a variable to hold the matched hotel data
-    let matchedHotelData = null;
+    let matchedHotelData: Hotel | null = null;
 
     // Loop through all files in the dataPath directory
     fs.readdirSync(dataPath).forEach((file) => {
       const filePath = path.join(dataPath, file);
-      const hotelData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const hotelData: Hotel = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
       // Check if the file's data matches either the hotelID or slug
       if (hotelData.hotelID === identifier || hotelData.slug === slugifiedIdentifier) {
@@ -184,11 +216,21 @@ export const getHotel = (req: Request, res: Response): Response | void => {
       return res.status(404).json({ message: 'Hotel not found' });
     }
 
-    // Return the matched hotel data
-    return res.status(200).json(matchedHotelData);
+    // Process the hotel data to include base64 images
+    const processedHotelData = processHotelData(matchedHotelData);
+
+    // Return the processed hotel data
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        hotel: processedHotelData
+      }
+    });
+
   } catch (error) {
     console.error('Error retrieving hotel:', error);
     return res.status(500).json({
+      status: 'error',
       message: 'Internal Server Error',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
