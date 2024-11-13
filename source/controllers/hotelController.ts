@@ -35,8 +35,6 @@ if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true });
 }
 
-// Helper function to create a base64-encoded test image file
-
 // Controller function to handle hotel creation and base64 image storage
 export const createHotel = (req: Request, res: Response): void => {
   try {
@@ -113,51 +111,83 @@ export const createHotel = (req: Request, res: Response): void => {
   }
 };
 
-
-
-
+//==========================================UPLOAD IMAGE CONTROLLER======================================================
 export const uploadImages = (req: Request, res: Response): void => {
   const { hotelId, roomTitle } = req.body;
-  const hotelPath = `${dataPath}${hotelId}.json`;
 
+  // Define the path for the hotel data file
+  const hotelPath = path.join(dataPath, `${hotelId}.json`);
+
+  // Check if hotel record exists
   if (!fs.existsSync(hotelPath)) {
     res.status(404).json({ message: 'Hotel not found' });
     return;
   }
 
-  const hotel: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
+  // Read the hotel data
+  const hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
 
-  const room = hotel.rooms.find(r => r.roomTitle === roomTitle);
+  // Find the room that matches the roomTitle
+  const room = hotel.rooms.find((r: any) => r.roomTitle === roomTitle);
   if (!room) {
     res.status(404).json({ message: 'Room not found' });
     return;
   }
 
+  // Ensure files are uploaded
+  if (!req.files || !(req.files as Express.Multer.File[]).length) {
+    res.status(400).json({ message: 'No files uploaded' });
+    return;
+  }
+
+  // Map uploaded files to Base64 strings
   const imageBase64Strings = (req.files as Express.Multer.File[])?.map((file) => {
     return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
   });
 
+  // Append the uploaded images to the room's image array
   room.roomImage = room.roomImage.concat(imageBase64Strings || []);
 
+  // Save the updated hotel data
   fs.writeFileSync(hotelPath, JSON.stringify(hotel, null, 2));
 
-  res.status(200).json({ message: 'Images uploaded successfully for the room', images: imageBase64Strings });
+  // Respond with the updated room images
+  res.status(200).json({
+    message: 'Images uploaded successfully for the room',
+    images: imageBase64Strings,
+  });
 };
 
+//=============================================GET HOTEL==========================================================
+export const getHotel = (req: Request, res: Response) => {
+  const { hotelID } = req.params;
 
-export const getHotel = async (req: Request, res: Response): Promise<void> => {
-  const { hotelId } = req.params;
-  const hotelPath = `${dataPath}${hotelId}.json`;
+  // Generate the path to the hotel data file
+  const hotelPath = path.join(__dirname, '../data', `${hotelID}.json`);
 
+  // Check if the hotel file exists
   if (!fs.existsSync(hotelPath)) {
-    res.status(404).json({ message: 'Hotel not found' });
-    return;
+    return res.status(404).json({ message: 'Hotel not found' });
   }
 
-  const hotel: Hotel = JSON.parse(await fs.promises.readFile(hotelPath, 'utf-8'));
-  res.status(200).json(hotel);
+  try {
+    const hotelData: Hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
+
+    // Construct full image URLs
+    hotelData.images = hotelData.images.map((image) => `http://localhost:3000${image}`);
+    hotelData.rooms.forEach((room) => {
+      room.roomImage = room.roomImage.map((image) => `http://localhost:3000${image}`);
+    });
+
+    // Send the hotel data as the response
+    return res.status(200).json(hotelData);
+  } catch (error) {
+    console.error('Error reading hotel data:', error); // Log the error for debugging
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
 };
 
+//=============================================UPDATE HOTEL========================================================
 export const updateHotel = (req: Request, res: Response): void => {
   const { hotelId } = req.params;
   const hotelPath = `${dataPath}${hotelId}.json`;
