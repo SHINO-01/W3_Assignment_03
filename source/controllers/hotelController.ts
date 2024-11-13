@@ -113,52 +113,40 @@ export const createHotel = (req: Request, res: Response): void => {
 };
 
 //==========================================UPLOAD IMAGE CONTROLLER======================================================
-export const uploadImages = (req: Request, res: Response): void => {
-  const { hotelId, roomTitle } = req.body;
+export const uploadHotelImages = async (req: Request, res: Response) => {
+  const hotelID = req.params.hotelID;
+  const hotelData = JSON.parse(fs.readFileSync(path.join(dataPath, `${hotelID}.json`), 'utf8')) as Hotel;
 
-  // Define the path for the hotel data file
-  const hotelPath = path.join(dataPath, `${hotelId}.json`);
-
-  // Check if hotel record exists
-  if (!fs.existsSync(hotelPath)) {
-    res.status(404).json({ message: 'Hotel not found' });
-    return;
+  // Handle hotel images
+  if (req.files) {
+    const images = req.files as Express.Multer.File[];
+    hotelData.images = [...hotelData.images, ...images.map((image) => image.filename)];
+    fs.writeFileSync(path.join(dataPath, `${hotelID}.json`), JSON.stringify(hotelData, null, 2));
   }
 
-  // Read the hotel data
-  const hotel = JSON.parse(fs.readFileSync(hotelPath, 'utf-8'));
-
-  // Find the room that matches the roomTitle
-  const room = hotel.rooms.find((r: any) => r.roomTitle === roomTitle);
-  if (!room) {
-    res.status(404).json({ message: 'Room not found' });
-    return;
-  }
-
-  // Ensure files are uploaded
-  if (!req.files || !(req.files as Express.Multer.File[]).length) {
-    res.status(400).json({ message: 'No files uploaded' });
-    return;
-  }
-
-  // Map uploaded files to Base64 strings
-  const imageBase64Strings = (req.files as Express.Multer.File[])?.map((file) => {
-    return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-  });
-
-  // Append the uploaded images to the room's image array
-  room.roomImage = room.roomImage.concat(imageBase64Strings || []);
-
-  // Save the updated hotel data
-  fs.writeFileSync(hotelPath, JSON.stringify(hotel, null, 2));
-
-  // Respond with the updated room images
-  res.status(200).json({
-    message: 'Images uploaded successfully for the room',
-    images: imageBase64Strings,
-  });
+  res.status(200).json({ message: 'Images uploaded successfully' });
 };
 
+export const uploadRoomImages = async (req: Request, res: Response) => {
+  const hotelID = req.params.hotelID;
+  const roomID = req.query.roomID as string;
+  const hotelData = JSON.parse(fs.readFileSync(path.join(dataPath, `${hotelID}.json`), 'utf8')) as Hotel;
+
+  // Find the room
+  const room = hotelData.rooms.find((r) => r.roomSlug === roomID);
+  if (!room) {
+    return res.status(404).json({ message: 'Room not found' });
+  }
+
+  // Handle room images
+  if (req.files) {
+    const images = req.files as Express.Multer.File[];
+    room.roomImage = [...room.roomImage, ...images.map((image) => image.filename)];
+    fs.writeFileSync(path.join(dataPath, `${hotelID}.json`), JSON.stringify(hotelData, null, 2));
+  }
+
+  res.status(200).json({ message: 'Images uploaded successfully' });
+};
 //=============================================GET HOTEL==========================================================
 function getBase64Image(imagePath: string): string {
   try {
