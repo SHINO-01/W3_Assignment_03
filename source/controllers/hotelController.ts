@@ -113,39 +113,54 @@ export const createHotel = (req: Request, res: Response): void => {
 };
 
 //==========================================UPLOAD IMAGE CONTROLLER======================================================
-export const uploadHotelImages = async (req: Request, res: Response) => {
-  const hotelID = req.params.hotelID;
-  const hotelData = JSON.parse(fs.readFileSync(path.join(dataPath, `${hotelID}.json`), 'utf8')) as Hotel;
+export const uploadImages = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { hotelID } = req.params;
+    const files = req.files as Express.Multer.File[];
+    
+    if (!files || files.length === 0) {
+      res.status(400).json({ message: 'No files uploaded' });
+      return;
+    }
 
-  // Handle hotel images
-  if (req.files) {
-    const images = req.files as Express.Multer.File[];
-    hotelData.images = [...hotelData.images, ...images.map((image) => image.filename)];
-    fs.writeFileSync(path.join(dataPath, `${hotelID}.json`), JSON.stringify(hotelData, null, 2));
+    const filePath = path.join(dataPath, `${hotelID}.json`);
+    
+    // Check if hotel exists
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: 'Hotel not found' });
+      return;
+    }
+
+    // Read existing hotel data
+    const hotelData: Hotel = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+    // Process and save new images
+    const newImagePaths = files.map((file) => {
+      const relativePath = `/uploads/images/${file.filename}`;
+      return relativePath;
+    });
+
+    // Add new images to existing ones
+    hotelData.images = [...hotelData.images, ...newImagePaths];
+
+    // Save updated hotel data
+    fs.writeFileSync(filePath, JSON.stringify(hotelData, null, 2));
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Images uploaded successfully',
+      data: {
+        images: newImagePaths
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading images:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-
-  res.status(200).json({ message: 'Images uploaded successfully' });
-};
-
-export const uploadRoomImages = async (req: Request, res: Response) => {
-  const hotelID = req.params.hotelID;
-  const roomID = req.query.roomID as string;
-  const hotelData = JSON.parse(fs.readFileSync(path.join(dataPath, `${hotelID}.json`), 'utf8')) as Hotel;
-
-  // Find the room
-  const room = hotelData.rooms.find((r) => r.roomSlug === roomID);
-  if (!room) {
-    return res.status(404).json({ message: 'Room not found' });
-  }
-
-  // Handle room images
-  if (req.files) {
-    const images = req.files as Express.Multer.File[];
-    room.roomImage = [...room.roomImage, ...images.map((image) => image.filename)];
-    fs.writeFileSync(path.join(dataPath, `${hotelID}.json`), JSON.stringify(hotelData, null, 2));
-  }
-
-  res.status(200).json({ message: 'Images uploaded successfully' });
 };
 //=============================================GET HOTEL==========================================================
 function getBase64Image(imagePath: string): string {

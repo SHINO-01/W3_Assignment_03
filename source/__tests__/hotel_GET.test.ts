@@ -9,7 +9,7 @@ function logResponse(testName: string, response: any) {
   console.log('Response Body:', JSON.stringify(response.body, null, 2));
   console.log('='.repeat(80) + '\n');
 }
-const hotelID = 'SZA340';
+const hotelID = 'BSX104';
 
 describe('GET /api/hotel/:hotelID', () => {
   afterAll((done) => {

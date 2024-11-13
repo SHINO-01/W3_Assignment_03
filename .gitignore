@@ -3,4 +3,4 @@ dist/
 data/
 .env
 test-img
-uploads
+uploads/images
