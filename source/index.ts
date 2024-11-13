@@ -2,7 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { __dirname } from './dirnameHelper'
 import { createHotel, getHotel, updateHotel, uploadImages } from './controllers/hotelController';
 
 const app = express();
