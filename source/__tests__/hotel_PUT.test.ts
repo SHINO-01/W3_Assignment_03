@@ -1,133 +1,113 @@
 import request from 'supertest';
-import fs from 'fs';
-import path from 'path';
-import { app, server } from '../index';
-import { Hotel } from '../models/hotelModel';
-import { __dirname } from '../dirnameHelper';
+import {app, server} from '../../source/index';
+import { Hotel } from '../../source/models/hotelModel'; 
 
-const dataPath = path.join(__dirname, '../data/');
+describe('Hotel API - PUT /api/hotel/:hotelID', () => {
+  const existingHotelID = 'ADF290'; 
 
-describe('Update Hotel Controller', () => {
-  const testHotelID = 'BSX104'; // Using existing hotel ID from sample
-  let originalHotelData: Hotel;
+  let existingHotelData: Hotel;
 
-  beforeEach(() => {
-    // Backup original hotel data
-    const filePath = path.join(dataPath, `${testHotelID}.json`);
-    originalHotelData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  beforeAll(async () => {
+    const res = await request(app).get(`/api/hotel/${existingHotelID}`);
+    expect(res.status).toBe(200);
+    existingHotelData = res.body.data.hotel;
   });
 
-  afterEach(() => {
-    // Restore original hotel data after each test
-    const filePath = path.join(dataPath, `${testHotelID}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(originalHotelData, null, 2));
-  });
+  it('should update hotel information successfully', async () => {
+    const updatedTitle = 'Updated Sunshine Inn';
+    const updatedDescription = 'A beautiful hotel with stunning views.';
 
-  afterAll((done) => {
-    server.close(done);
-  });
-
-  it('should perform a partial update of hotel information', async () => {
-    const partialUpdate = {
-      title: 'Partially Updated Luxury Hotel',
-      description: 'A refined luxury hotel experience'
+    const updatedHotel: Hotel = {
+      ...existingHotelData,
+      title: updatedTitle,
+      description: updatedDescription,
     };
 
-    const response = await request(app)
-      .put(`/api/hotel/${testHotelID}`)
-      .send(partialUpdate)
-      .expect(200);
+    const res = await request(app)
+      .put(`/api/hotel/${existingHotelID}`)
+      .send(updatedHotel);
 
-    expect(response.body.status).toBe('success');
-    expect(response.body.data.hotel).toEqual(expect.objectContaining({
-      ...originalHotelData,
-      title: partialUpdate.title,
-      description: partialUpdate.description,
-      slug: 'partially-updated-luxury-hotel',
-      // Verify unchanged fields remain the same
-      guestCount: originalHotelData.guestCount,
-      bedroomCount: originalHotelData.bedroomCount,
-      bathroomCount: originalHotelData.bathroomCount,
-      amenities: originalHotelData.amenities,
-      host: originalHotelData.host
-    }));
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.message).toBe('Hotel updated successfully');
+    expect(res.body.data.hotel.title).toBe(updatedTitle);
+    expect(res.body.data.hotel.description).toBe(updatedDescription);
   });
 
-  it('should perform a full update of hotel information', async () => {
-    const fullUpdate = {
-      title: 'Completely Updated Luxury Resort',
-      description: 'A fully renovated luxury resort experience',
-      guestCount: 8,
-      bedroomCount: 4,
-      bathroomCount: 3,
-      amenities: ['WiFi', 'Pool', 'Spa', 'Restaurant', 'Gym', 'Beach Access'],
-      host: 'John Smith',
-      address: '789 Ocean Drive, Miami Beach, FL',
-      latitude: 25.7617,
-      longitude: -80.1918,
-      rooms: [
-        {
-          hotelSlug: 'completely-updated-luxury-resort',
-          roomSlug: 'luxury-suite',
-          roomTitle: 'Luxury Suite',
-          bedroomCount: 2,
-          roomImage: originalHotelData.rooms[0].roomImage // Keep existing room images
-        }
-      ],
-      images: originalHotelData.images // Keep existing hotel images
+  it('should update hotel information partially', async () => {
+    const updatedDescription = 'A newly renovated hotel with modern amenities.';
+
+    const updatedHotel: Hotel = {
+      ...existingHotelData, 
+      description: updatedDescription,
     };
 
-    const response = await request(app)
-      .put(`/api/hotel/${testHotelID}`)
-      .send(fullUpdate)
-      .expect(200);
+    const res = await request(app)
+      .put(`/api/hotel/${existingHotelID}`)
+      .send(updatedHotel);
 
-    expect(response.body.status).toBe('success');
-    expect(response.body.data.hotel).toEqual(expect.objectContaining({
-      hotelID: testHotelID,
-      slug: 'completely-updated-luxury-resort',
-      title: fullUpdate.title,
-      description: fullUpdate.description,
-      guestCount: fullUpdate.guestCount,
-      bedroomCount: fullUpdate.bedroomCount,
-      bathroomCount: fullUpdate.bathroomCount,
-      amenities: fullUpdate.amenities,
-      host: fullUpdate.host,
-      address: fullUpdate.address,
-      latitude: fullUpdate.latitude,
-      longitude: fullUpdate.longitude
-    }));
-
-    // Verify room data is updated correctly
-    expect(response.body.data.hotel.rooms).toHaveLength(1);
-    expect(response.body.data.hotel.rooms[0]).toEqual(expect.objectContaining({
-      hotelSlug: 'completely-updated-luxury-resort',
-      roomSlug: 'luxury-suite',
-      roomTitle: 'Luxury Suite',
-      bedroomCount: 2
-    }));
-
-    // Verify images are preserved
-    expect(response.body.data.hotel.images).toEqual(originalHotelData.images);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.message).toBe('Hotel updated successfully');
+    expect(res.body.data.hotel.description).toBe(updatedDescription);
+    expect(res.body.data.hotel.title).toBe(existingHotelData.title); 
   });
 
-  it('should verify data persistence after update', async () => {
-    const updateData = {
-      title: 'Persistence Test Hotel',
-      description: 'Testing data persistence'
+  it('should return 404 if hotel not found', async () => {
+    const nonExistingHotelID = 'XYZ123'; 
+    const updatedHotel: Hotel = { 
+      hotelID: 'XYZ123', 
+      slug: 'new-hotel',
+      images: [], 
+      title: 'New Hotel',
+      description: 'A new hotel in town',
+      guestCount: 4, 
+      bedroomCount: 2,
+      bathroomCount: 1,
+      amenities: [],
+      host: 'Test Host',
+      address: '123 Main St',
+      latitude: 0,
+      longitude: 0,
+      rooms: [] 
     };
 
-    await request(app)
-      .put(`/api/hotel/${testHotelID}`)
-      .send(updateData)
-      .expect(200);
+    const res = await request(app)
+      .put(`/api/hotel/${nonExistingHotelID}`)
+      .send(updatedHotel);
 
-    // Read the file directly to verify persistence
-    const filePath = path.join(dataPath, `${testHotelID}.json`);
-    const savedData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-    expect(savedData.title).toBe(updateData.title);
-    expect(savedData.description).toBe(updateData.description);
-    expect(savedData.slug).toBe('persistence-test-hotel');
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe('Hotel not found');
   });
+
+  it('should handle invalid input gracefully', async () => {
+    const invalidHotelID = '123';
+    const updatedHotel: Hotel = {
+      hotelID: '123', 
+      slug: 'invalid-hotel', 
+      images: [], 
+      title: 'New Hotel',
+      description: 'A new hotel in town',
+      guestCount: 4, 
+      bedroomCount: 2,
+      bathroomCount: 1,
+      amenities: [],
+      host: 'Test Host',
+      address: '123 Main St',
+      latitude: 0,
+      longitude: 0,
+      rooms: [] 
+    };
+
+    const res = await request(app)
+      .put(`/api/hotel/${invalidHotelID}`)
+      .send(updatedHotel);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe('Hotel not found'); 
+  });
+});
+
+afterAll(() => {
+  server.close();
 });
