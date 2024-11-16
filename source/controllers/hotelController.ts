@@ -184,8 +184,6 @@ export const getHotel = (req: Request, res: Response): Response | void => {
     if (!matchedHotelData) {
       return res.status(404).json({ message: 'Hotel not found' });
     }
-
-    // No need to process data to include base64 images as it is not encoded anymore
     // const processedHotelData = processHotelData(matchedHotelData);
 
     // Return the processed hotel data
