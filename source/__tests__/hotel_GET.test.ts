@@ -10,12 +10,9 @@ function logResponse(testName: string, response: any) {
   console.log('='.repeat(80) + '\n');
 }
 
-const hotelID = 'ADF290'; // Replace with the hotel ID from your data
+const hotelID = 'KWF755'; // Replace with the hotel ID from your data
 
 describe('GET /api/hotel/:hotelID', () => {
-  afterAll((done) => {
-    server.close(done);
-  });
 
   it('should retrieve the hotel data for a valid hotel ID', async () => {
     const response = await request(app).get(`/api/hotel/${hotelID}`);
@@ -115,6 +112,8 @@ describe('GET /api/hotel/:hotelID', () => {
       });
     });
   });
-
+  afterAll((done) => {
+    server.close(done);
+  });
   // ... (rest of your tests) ...
 });

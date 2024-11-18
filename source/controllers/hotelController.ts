@@ -111,49 +111,90 @@ export const createHotel = (req: Request, res: Response): void => {
 };
 
 //==========================================UPLOAD IMAGE CONTROLLER======================================================
-export const uploadImages = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { hotelID } = req.params;
-    const files = req.files as Express.Multer.File[];
-    
-    if (!files || files.length === 0) {
-      res.status(400).json({ message: 'No files uploaded' });
-      return;
-    }
+interface ImageUploadRequest extends Request {
+  body: {
+    imagePaths: string[];  // Array of image paths
+  }
+}
 
-    const filePath = path.join(dataPath, `${hotelID}.json`);
-    
-    // Check if hotel exists
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ message: 'Hotel not found' });
-      return;
+export const uploadImages = async (req: ImageUploadRequest, res: Response): Promise<Response | void> => {
+  try {
+    const hotelID = req.params.hotelID;
+    const uploadType = req.query.type as string; // 'hotel' or 'room'
+    const roomSlug = req.query.roomSlug as string; // Required if uploadType is 'room'
+    const { imagePaths } = req.body;
+
+    if (!imagePaths || imagePaths.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No image paths provided'
+      });
     }
 
     // Read existing hotel data
+    const filePath = path.join(dataPath, `${hotelID}.json`);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Hotel not found'
+      });
+    }
+
     const hotelData: Hotel = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    // Process and save new images
-    const newImagePaths = files.map((file) => {
-      const relativePath = `/uploads/images/${file.filename}`;
-      return relativePath;
+    // Process and save images from provided paths
+    const savedImages = imagePaths.map((imagePath: string) => {
+      // Validate if source image exists
+      if (!fs.existsSync(imagePath)) {
+        throw new Error(`Source image not found: ${imagePath}`);
+      }
+
+      const imageFileName = `${hotelID}_${uploadType}_${Date.now()}_${path.basename(imagePath)}`;
+      const imageDestination = path.join(imageDirectory, imageFileName);
+
+      // Copy image to destination
+      fs.copyFileSync(imagePath, imageDestination);
+
+      return `/uploads/images/${imageFileName}`;
     });
 
-    // Add new images to existing ones
-    hotelData.images = [...hotelData.images, ...newImagePaths];
+    // Update hotel data based on upload type
+    if (uploadType === 'hotel') {
+      hotelData.images = [...hotelData.images, ...savedImages];
+    } else if (uploadType === 'room' && roomSlug) {
+      const roomIndex = hotelData.rooms.findIndex(room => room.roomSlug === roomSlug);
+      if (roomIndex === -1) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Room not found'
+        });
+      }
+      hotelData.rooms[roomIndex].roomImage = [
+        ...hotelData.rooms[roomIndex].roomImage,
+        ...savedImages
+      ];
+    } else {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid upload type or missing room slug'
+      });
+    }
 
     // Save updated hotel data
     fs.writeFileSync(filePath, JSON.stringify(hotelData, null, 2));
 
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       message: 'Images uploaded successfully',
       data: {
-        images: newImagePaths
+        uploadedImages: savedImages,
+        hotel: hotelData
       }
     });
+
   } catch (error) {
     console.error('Error uploading images:', error);
-    res.status(500).json({
+    return res.status(500).json({
       status: 'error',
       message: 'Internal Server Error',
       error: error instanceof Error ? error.message : 'Unknown error'

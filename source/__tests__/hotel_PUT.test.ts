@@ -3,7 +3,7 @@ import {app, server} from '../../source/index';
 import { Hotel } from '../../source/models/hotelModel'; 
 
 describe('Hotel API - PUT /api/hotel/:hotelID', () => {
-  const existingHotelID = 'ADF290'; 
+  const existingHotelID = 'KWF755'; 
 
   let existingHotelData: Hotel;
 

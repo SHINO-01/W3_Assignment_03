@@ -1,97 +1,105 @@
 import request from 'supertest';
-import fs from 'fs';
+import express from 'express';
 import path from 'path';
-import { app, server } from '../index';
+import fs from 'fs';
+import { uploadImages } from '../controllers/hotelController';
 
-const testImageDir = path.join(__dirname, '../../test-img');
+const app = express();
+app.use(express.json());
 
-describe('Image Upload Tests', () => {
-  // First, let's create a hotel and get its ID
-  let hotelId: string;
+// Set up the route
+app.post('/api/hotel/:hotelID/images', uploadImages);
 
-  beforeAll(async () => {
-    // Create a test hotel first
-    const hotelData = {
-      title: 'Test Hotel',
-      description: 'Test Description',
-      guestCount: 4,
-      bedroomCount: 2,
-      bathroomCount: 1,
-      amenities: ['WiFi'],
-      host: 'Test Host',
-      address: 'Test Address',
-      latitude: 0,
-      longitude: 0
-    };
+describe('Hotel Image Path Upload Tests', () => {
+  const testHotelId = 'KWF755';
+  const testImageDir = path.join(__dirname, '../../', 'test-img');
+  const testUploadsDir = path.join(__dirname, '..', 'uploads', 'images');
 
-    const createResponse = await request(app)
-      .post('/api/hotel')
-      .send(hotelData);
-
-    hotelId = createResponse.body.hotelID;
+  // Setup before tests
+  beforeAll(() => {
+    // Ensure uploads directory exists
+    if (!fs.existsSync(testUploadsDir)) {
+      fs.mkdirSync(testUploadsDir, { recursive: true });
+    }
   });
 
-  test('POST /api/hotel/:hotelID/images - Upload multiple images', async () => {
-    const testImage1Path = path.join(testImageDir, 'image02.png');
-    const testImage2Path = path.join(testImageDir, 'image05.png');
-
-    // Verify test images exist
-    expect(fs.existsSync(testImage1Path)).toBe(true);
-    expect(fs.existsSync(testImage2Path)).toBe(true);
-
-    const response = await request(app)
-      .post(`/api/hotel/${hotelId}/images`)
-      .attach('images', testImage1Path)
-      .attach('images', testImage2Path);
-
-    expect(response.status).toBe(200);
-    expect(response.body.status).toBe('success');
-    expect(response.body.message).toBe('Images uploaded successfully');
-    expect(response.body.data.images).toHaveLength(2);
-    expect(response.body.data.images[0]).toMatch(/^\/uploads\/images\/.+\.png$/);
-    expect(response.body.data.images[1]).toMatch(/^\/uploads\/images\/.+\.png$/);
+  // Cleanup after tests - only clean uploaded files, not source files
+  afterAll(() => {
+    // Clean only the uploaded test files
+    const files = fs.readdirSync(testUploadsDir);
+    files.forEach(file => {
+      if (file.startsWith('PBS773_')) {
+        fs.unlinkSync(path.join(testUploadsDir, file));
+      }
+    });
   });
 
-  test('POST /api/hotel/:hotelID/images - Handle non-existent hotel', async () => {
-    const testImage1Path = path.join(testImageDir, 'image02.png');
-    
-    const response = await request(app)
-      .post('/api/hotel/non-existent-hotel/images')
-      .attach('images', testImage1Path);
+  describe('POST /api/hotel/:hotelID/images', () => {
+    test('should upload hotel images from paths successfully', async () => {
+      const imagePaths = [
+        path.join(testImageDir, 'image01.png'),
+        path.join(testImageDir, 'image02.png')
+      ];
 
-    expect(response.status).toBe(404);
-    expect(response.body.message).toBe('Hotel not found');
-  });
+      const response = await request(app)
+        .post(`/api/hotel/${testHotelId}/images`)
+        .query({ type: 'hotel' })
+        .send({ imagePaths })
+        .expect(200);
 
-  test('POST /api/hotel/:hotelID/images - Handle no files uploaded', async () => {
-    const response = await request(app)
-      .post(`/api/hotel/${hotelId}/images`)
-      .send();
+      expect(response.body.status).toBe('success');
+      expect(response.body.data.uploadedImages).toHaveLength(2);
+      expect(response.body.data.hotel.images).toContain(response.body.data.uploadedImages[0]);
+      expect(response.body.data.hotel.images).toContain(response.body.data.uploadedImages[1]);
+    });
 
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe('No files uploaded');
-  });
+    test('should upload room images from paths successfully', async () => {
+      const imagePaths = [
+        path.join(testImageDir, 'image01.png')
+      ];
 
-  test('POST /api/hotel/:hotelID/images - Handle invalid file type', async () => {
-    // Create a temporary text file
-    const invalidFilePath = path.join(testImageDir, 'test.txt');
-    fs.writeFileSync(invalidFilePath, 'This is not an image');
+      const response = await request(app)
+        .post(`/api/hotel/${testHotelId}/images`)
+        .query({ 
+          type: 'room',
+          roomSlug: 'deluxe-suite'
+        })
+        .send({ imagePaths })
+        .expect(200);
 
-    const response = await request(app)
-      .post(`/api/hotel/${hotelId}/images`)
-      .attach('images', invalidFilePath);
+      expect(response.body.status).toBe('success');
+      expect(response.body.data.uploadedImages).toHaveLength(1);
+      
+      const roomImages = response.body.data.hotel.rooms.find(
+        (room: any) => room.roomSlug === 'deluxe-suite'
+      ).roomImage;
+      expect(roomImages).toContain(response.body.data.uploadedImages[0]);
+    });
 
-    // Clean up temporary file
-    fs.unlinkSync(invalidFilePath);
+    test('should handle non-existent image paths', async () => {
+      const imagePaths = [
+        path.join(testImageDir, 'nonexistent.png')
+      ];
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toContain('Only image files are allowed');
-  });
+      const response = await request(app)
+        .post(`/api/hotel/${testHotelId}/images`)
+        .query({ type: 'hotel' })
+        .send({ imagePaths })
+        .expect(500);
 
-  // Cleanup after all tests
-  afterAll(async () => {
-    // Delete the test hotel if needed
-    // Add cleanup code here if necessary
-    server.close();
+      expect(response.body.status).toBe('error');
+      expect(response.body.error).toContain('Source image not found');
+    });
+
+    test('should handle missing image paths', async () => {
+      const response = await request(app)
+        .post(`/api/hotel/${testHotelId}/images`)
+        .query({ type: 'hotel' })
+        .send({})
+        .expect(400);
+
+      expect(response.body.status).toBe('error');
+      expect(response.body.message).toBe('No image paths provided');
+    });
   });
 });
