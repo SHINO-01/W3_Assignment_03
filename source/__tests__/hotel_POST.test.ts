@@ -1,28 +1,17 @@
 import request from 'supertest';
-import fs from 'fs';
 import path from 'path';
 import { app, server } from '../index';
 
 const testImageDir = path.join(__dirname, '../../test-img');
 
-// Helper function to read an existing test image as base64
-const getTestImageAsBase64 = (imageName: string): string => {
-  const testImagePath = path.join(testImageDir, imageName);
-
-  // Check if the file exists
-  if (!fs.existsSync(testImagePath)) {
-    throw new Error(`Test image ${imageName} not found at ${testImagePath}`);
-  }
-
-  // Read the file and encode it to base64
-  const imageData = fs.readFileSync(testImagePath);
-  return `data:image/png;base64,${imageData.toString('base64')}`;
+const getTestImagePath = (imageName: string): string => {
+  return path.join(testImageDir, imageName);
 };
 
-test('POST /api/hotel - Create a new hotel with real image data', async () => {
-  // Fetch images from the directory
-  const hotelImage = getTestImageAsBase64('image02.png');
-  const roomImage = getTestImageAsBase64('image05.png');
+test('POST /api/hotel - Create a new hotel with image file paths', async () => {
+  // Fetch image paths from the directory
+  const hotelImagePath = getTestImagePath('image02.png');
+  const roomImagePath = getTestImagePath('image05.png');
 
   const hotelData = {
     title: 'Sunshine Inn',
@@ -35,13 +24,13 @@ test('POST /api/hotel - Create a new hotel with real image data', async () => {
     address: '123 Beach Ave, Miami, FL',
     latitude: 25.7617,
     longitude: -80.1918,
-    hotelImages: [hotelImage], // Send image as base64
-    rooms: [
+    hotelImages: [hotelImagePath], // Send image paths
+    rooms:[ 
       {
         roomTitle: 'Deluxe Suite',
         bedroomCount: 1,
         bathroomCount: 1,
-        roomImage: [roomImage], // Send image as base64
+        roomImage: [roomImagePath], // Send image paths
       },
     ],
   };
@@ -65,3 +54,4 @@ test('POST /api/hotel - Create a new hotel with real image data', async () => {
 afterAll(() => {
   server.close();
 });
+
