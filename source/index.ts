@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { __dirname } from './dirnameHelper';
 import { createHotel, getHotel, updateHotel, uploadImages } from './controllers/hotelController';
+import cors from "cors";
 
 const app = express();
 
@@ -45,7 +46,10 @@ app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Serve static files
 app.use('/uploads/images', express.static(path.join(__dirname, '../uploads/images')));
-
+app.use(cors({
+  origin: "http://localhost:3001", // Allow requests from frontend's origin
+  methods: "GET, POST, PUT, DELETE",
+}));
 // Hotel routes
 app.post('/api/hotel', createHotel);
 app.get('/api/hotel/:hotelID', getHotel);
