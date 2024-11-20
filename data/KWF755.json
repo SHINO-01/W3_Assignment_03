@@ -1,0 +1,40 @@
+{
+  "hotelID": "KWF755",
+  "slug": "sunshine-inn",
+  "images": [
+    "/uploads/images/KWF755_hotel_1731922546285_0.png",
+    "/uploads/images/KWF755_hotel_1732008847022_image01.png",
+    "/uploads/images/KWF755_hotel_1732008847023_image02.png",
+    "/uploads/images/KWF755_hotel_1732018375142_image01.png",
+    "/uploads/images/KWF755_hotel_1732018375142_image02.png",
+    "/uploads/images/KWF755_hotel_1732018470807_image01.png",
+    "/uploads/images/KWF755_hotel_1732018470809_image02.png"
+  ],
+  "title": "Sunshine Inn",
+  "description": "A newly renovated hotel with modern amenities.",
+  "guestCount": 4,
+  "bedroomCount": 2,
+  "bathroomCount": 1,
+  "amenities": [
+    "WiFi",
+    "Pool",
+    "Air Conditioning"
+  ],
+  "host": "John Doe",
+  "address": "123 Beach Ave, Miami, FL",
+  "latitude": 25.7617,
+  "longitude": -80.1918,
+  "rooms": [
+    {
+      "roomTitle": "Deluxe Suite",
+      "bedroomCount": 1,
+      "bathroomCount": 1,
+      "roomImage": [
+        "/uploads/images/KWF755_room_1731922546285_0.png",
+        "/uploads/images/KWF755_room_1732018470823_image01.png"
+      ],
+      "hotelSlug": "sunshine-inn",
+      "roomSlug": "deluxe-suite"
+    }
+  ]
+}

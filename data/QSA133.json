@@ -1,0 +1,31 @@
+{
+  "hotelID": "QSA133",
+  "slug": "sunshine-inn",
+  "images": [
+    "/uploads/images/QSA133_hotel_1732018472129_0.png"
+  ],
+  "title": "Sunshine Inn",
+  "description": "A cozy hotel by the beach.",
+  "guestCount": 4,
+  "bedroomCount": 2,
+  "bathroomCount": 1,
+  "amenities": [
+    "WiFi",
+    "Pool",
+    "Air Conditioning"
+  ],
+  "host": "John Doe",
+  "address": "123 Beach Ave, Miami, FL",
+  "latitude": 25.7617,
+  "longitude": -80.1918,
+  "rooms": [
+    {
+      "roomTitle": "Deluxe Suite",
+      "bedroomCount": 1,
+      "bathroomCount": 1,
+      "roomImage": [
+        "/uploads/images/QSA133_room_1732018472129_0.png"
+      ]
+    }
+  ]
+}
