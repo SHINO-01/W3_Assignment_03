@@ -1,18 +1,6 @@
 <h1>Hotel API Project</h1>
   <p>This project provides a RESTful API for managing hotel records. You can create a hotel, upload images in base64 format, and retrieve hotel details based on either hotel ID or slug. Images are stored in the server filesystem, with paths saved in JSON files for efficient access.</p>
 
-<hr>
-
-  <h2>Table of Contents</h2>
-  <ol>
-    <li><a href="#project-structure">Project Structure</a></li>
-    <li><a href="#setup-instructions">Setup Instructions</a></li>
-    <li><a href="#using-the-api">Using the API</a></li>
-    <li><a href="#file-overview">File Overview</a></li>
-    <li><a href="#license">License</a></li>
-  </ol>
-<hr>
-
   <h2 id="project-structure">Project Structure</h2>
   <p>Here’s a quick overview of the project structure and what they look like!</p>
   
@@ -59,40 +47,40 @@ W3_Assignment_03/
     <li><strong>npm</strong> (v6.x or above)</li>
   </ul>
   
-<h3>Steps to Set Up</h3>
-
-  <ol>
-    <li><strong>Clone the Repository</strong>:
-      <pre><code>
-        git clone https://github.com/SHINO-01/W3_Assignment_03.git
-          cd W3_Assignment_03.git
-      </code></pre>
-    </li>
-    <li><strong>Install Dependencies</strong>:
-      <p>Run the following command to install all necessary dependencies:</p>
-      <pre><code>npm install</code></pre>
-    </li>
-    <li><strong>Run the Server</strong>:
-      <p>Start the server with:</p>
-      <pre><code>npm run start</code></pre>
-      <p>The server should now be running on <code>http://localhost:3000</code>. or you could use</p>
-      <pre><code>npm run dev</code></pre>
-    </li>
-    <li><strong>Run Tests</strong>:
-      <p>To test the application, use:</p>
-      <pre><code>npm run test</code></pre>
-    </li>
-  </ol>
-
-   <hr>
-
-  <h2 id="using-the-api">Using the API</h2>
-
-  <ul>
-    <li><strong>Create a Hotel</strong>: Send a <code>POST</code> request to <code>/api/hotel</code> with hotel details and base64 encoded images.</li>
-    <li><strong>Retrieve Hotel by ID</strong>: Send a <code>GET</code> request to <code>/api/hotel/:hotelID</code>.</li>
-    <li><strong>Retrieve Hotel by Slug</strong>: Send a <code>GET</code> request to <code>/api/hotel/slug/:slug</code>.</li>
-  </ul>
+<h2>1. API Instructions</h2>
+        <h3>1.1 Installation</h3>
+        <pre>
+git clone https://github.com/SHINO-01/W3_Assignment_03.git<API_REPO_URL>
+cd W3_Assignment_03<API_FOLDER>
+npm install
+        </pre>
+        <h3>1.2 Running the API</h3>
+        <pre>
+# run in development mode
+npm run dev
+        </pre>
+        <p>The API will be accessible at <span class="code">http://localhost:3000</span>.</p>
+        <h3>1.3 Sample Endpoints</h3>
+        <ul>
+            <li><code>GET /api/hotel/:hotelId</code> - Fetch details for a specific hotel.</li>
+            <li><code>POST /api/hotel</code> - Create a new hotel.</li>
+            <li><code>PUT /api/hotel/:hotelId</code> - Update an existing hotel.</li>
+        </ul>
+        <h3>1.4 Testing the API</h3>
+        <p>Run tests using Jest:</p>
+        <pre>
+npm test
+        </pre>
+        <p>Example test command:</p>
+        <pre>
+npx jest ./source/__tests__/hotel_GET.test.ts
+        </pre>
+        <h3>1.5 Known Issues</h3>
+        <ul>
+            <li>Images must be stored in the <code>uploads/images</code> folder for static file serving.</li>
+            <li>Images must be stored in the test-img folder for the POST(Create Hotel) Function to work</li>
+            <li>Ensure <code>cors</code> is properly configured when accessing the API from a different origin.</li>
+        </ul>
 
   <p>Example request format for creating a hotel:</p>
 
@@ -113,10 +101,10 @@ W3_Assignment_03/
       "roomTitle": "Deluxe Suite",
       "bedroomCount": 1,
       "bathroomCount": 1,
-      "roomImage": ["base64EncodedImageStringHere"]
+      "roomImage": ["Image Path"]
     }
   ],
-  "hotelImages": ["base64EncodedImageStringHere"]
+  "hotelImages": ["Image Path"]
 }
   </code></pre>
 
