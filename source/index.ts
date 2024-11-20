@@ -4,11 +4,12 @@ import path from 'path';
 import fs from 'fs';
 import { __dirname } from './dirnameHelper';
 import { createHotel, getHotel, updateHotel, uploadImages } from './controllers/hotelController';
+import cors from "cors";
 
 const app = express();
 
 // Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, 'uploads/images');
+const uploadDir = path.join(__dirname, '../uploads/images');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -16,7 +17,7 @@ if (!fs.existsSync(uploadDir)) {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads/images'))
+    cb(null, path.join(__dirname, '../uploads/images'))
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
@@ -40,12 +41,15 @@ const upload = multer({
 });
 
 // Increase payload size limit
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Serve static files
-app.use('/uploads/images', express.static(path.join(__dirname, 'uploads/images')));
-
+app.use('/uploads/images', express.static(path.join(__dirname, '../uploads/images')));
+app.use(cors({
+  origin: "http://localhost:3001", // Allow requests from frontend's origin
+  methods: "GET, POST, PUT, DELETE",
+}));
 // Hotel routes
 app.post('/api/hotel', createHotel);
 app.get('/api/hotel/:hotelID', getHotel);
